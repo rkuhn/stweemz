@@ -61,7 +61,10 @@ class MergeTest {
   private def compare[K, V](left: Map[K, V], right: Map[K, V]) {
     val surplus = right.filterNot { case (k, v) ⇒ left.get(k) == Some(v) }
     val missing = left.filterNot { case (k, v) => right.get(k) == Some(v) }
-    println(s"surplus: $surplus\n\nmissing: $missing")
+    if (surplus.nonEmpty)
+      println(s"surplus: $surplus")
+    if (missing.nonEmpty)
+      println(s"missing: $missing")
   }
 
 }
