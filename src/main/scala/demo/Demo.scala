@@ -12,7 +12,7 @@ object Demo {
   implicit val sys = ActorSystem("Intro")
   implicit val ec = sys.dispatcher
   implicit val sched = sys.scheduler
-  val mat = FlowMaterializer(MaterializerSettings(initialInputBufferSize = 2, maximumInputBufferSize = 2))
+  val mat = FlowMaterializer(MaterializerSettings(initialInputBufferSize = 2))
 
   case class Summary(num: Int, amount: Long) {
     def +(t: Transfer) = Summary(num + 1, amount + t.amount)
