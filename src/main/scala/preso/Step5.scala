@@ -26,9 +26,20 @@ object Step5 extends App {
   val ticks = Flow(1.second, () ⇒ Tick)
   
   // flow of rates
+  val rateFlow0 = Flow(5.seconds, {
+    var current = 1.0
+    
+    () => {
+      current *= 1.5
+      rates(current)
+    }
+  }).toProducer(mat)
+  val rateFlow = Flow(rates(1.0) :: Nil).concat(rateFlow0)
   
   // expand rates and use them to convert Transfers
-  val summarized: Producer[Summary] = ???
+  val summarized = rateFlow.expand(identity, (r: Map[Currency, Double]) => (r, r)).zip(input)
+    .map{case (rates, t) => Transfer(t.from, t.to, Currency("EUR"), (t.amount / rates(t.currency)).toLong)}
+    .conflate[Summary](Summary(_), _ + _).toProducer(mat)
   
   ticks.zip(summarized).foreach { case (_, Summary(n, amount)) ⇒ println(s"$n transfers, amounting to $amount") }.consume(mat)
 

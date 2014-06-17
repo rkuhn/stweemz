@@ -16,4 +16,7 @@ object Step2 extends App {
 
   val input = Flow(() ⇒ transfer()).toProducer(mat)
   // rate limit to one Transfer per second and print it
+  val ticks = Flow(1.second, () => Tick)
+  
+  ticks.zip(input).foreach(println).consume(mat)
 }

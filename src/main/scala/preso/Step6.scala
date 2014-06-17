@@ -25,6 +25,7 @@ object Step6 extends App {
     }.toProducer(mat)
 
   // merge streams and analyze in 1sec window
+  Flow(Merge(streams, mat)).groupedWithin(1000000, 1.second).map(analyze).foreach(println).consume(mat)
 
   private def analyze(transfers: Seq[Transfer]): String = {
     val num = transfers.size
