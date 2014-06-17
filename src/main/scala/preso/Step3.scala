@@ -6,8 +6,6 @@ import akka.stream.MaterializerSettings
 import akka.stream.scaladsl.Flow
 import scala.concurrent.duration._
 
-case object Tick
-
 object Step3 extends App {
   import Bank._
 

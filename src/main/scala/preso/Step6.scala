@@ -19,7 +19,7 @@ object Step6 extends App {
   val ticks = Flow(1000.millis, () ⇒ Tick)
 
   val streams =
-    for (_ ← 1 to 30000) yield ticks.zip(input.toProducer(mat)).map(x ⇒ x._2).mapFuture { t ⇒
+    for (_ ← 1 to 50000) yield ticks.zip(input.toProducer(mat)).map(x ⇒ x._2).mapFuture { t ⇒
       WebService.convertToEUR(t.currency, t.amount)
         .map(amount ⇒ Transfer(t.from, t.to, Currency("EUR"), amount))
     }.toProducer(mat)
