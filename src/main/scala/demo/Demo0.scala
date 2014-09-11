@@ -22,7 +22,7 @@ object Demo0 {
   }
 
   def main(args: Array[String]): Unit = {
-    val input = Flow(() ⇒ Transfer()).toProducer(mat)
+    val input = Flow(() ⇒ Transfer()).toPublisher(mat)
     val ticks = Flow(1.second, () ⇒ Tick)
 
     val rateFlow = Flow(5.seconds, {
@@ -36,7 +36,7 @@ object Demo0 {
 
     val summarized = rateFlow.expand(identity, (rates: Map[Currency, Double]) ⇒ rates -> rates).zip(input).map {
       case (rates, t) ⇒ Transfer(t.from, t.to, Currency("EUR"), (t.amount.toDouble / rates(t.currency)).toLong)
-    }.conflate[Summary](Summary(_), _ + _).toProducer(mat)
+    }.conflate[Summary](Summary(_), _ + _).toPublisher(mat)
 
     ticks.zip(summarized).foreach { case (_, Summary(n, amount)) ⇒ println(s"$n transfers, amounting to $amount") }.consume(mat)
   }

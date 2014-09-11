@@ -21,10 +21,11 @@ object Step4 extends App {
   implicit val sched = sys.scheduler
   val mat = FlowMaterializer(MaterializerSettings(initialInputBufferSize = 2))
 
-  val input = Flow(() ⇒ transfer()).toProducer(mat)
+  val input = Flow(() ⇒ transfer()).toPublisher(mat)
   val ticks = Flow(1.second, () ⇒ Tick)
   // convert to EUR, then conflate and print one per second
-  val summarized = Flow(input).mapFuture(t => WebService.convertToEUR(t.currency, t.amount).map(Transfer(t.from, t.to, Currency("EUR"), _)))
-  .conflate[Summary](Summary(_), _ + _).toProducer(mat)
+  val summarized = Flow(input).mapFuture(t =>
+    WebService.convertToEUR(t.currency, t.amount).map(Transfer(t.from, t.to, Currency("EUR"), _)))
+  .conflate[Summary](Summary(_), _ + _).toPublisher(mat)
   ticks.zip(summarized).foreach { case (_, Summary(num, amount)) => println(s"$num transfers worth $amount") }.consume(mat)
 }

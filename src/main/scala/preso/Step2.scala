@@ -14,7 +14,7 @@ object Step2 extends App {
   implicit val sys = ActorSystem("Intro")
   val mat = FlowMaterializer(MaterializerSettings())
 
-  val input = Flow(() ⇒ transfer()).toProducer(mat)
+  val input = Flow(() ⇒ transfer()).toPublisher(mat)
   // rate limit to one Transfer per second and print it
   val ticks = Flow(1.second, () => Tick)
   

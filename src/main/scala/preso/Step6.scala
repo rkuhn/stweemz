@@ -5,7 +5,6 @@ import akka.stream.FlowMaterializer
 import akka.stream.MaterializerSettings
 import akka.stream.scaladsl.Flow
 import scala.concurrent.duration._
-import org.reactivestreams.api.Producer
 
 object Step6 extends App {
   import Bank._
@@ -19,13 +18,23 @@ object Step6 extends App {
   val ticks = Flow(1000.millis, () ⇒ Tick)
 
   val streams =
-    for (_ ← 1 to 50000) yield ticks.zip(input.toProducer(mat)).map(x ⇒ x._2).mapFuture { t ⇒
-      WebService.convertToEUR(t.currency, t.amount)
-        .map(amount ⇒ Transfer(t.from, t.to, Currency("EUR"), amount))
-    }.toProducer(mat)
+    for (_ ← 1 to 38462)
+      yield ticks.
+              zip(input.toPublisher(mat)).
+              map(x ⇒ x._2).
+              mapFuture { t ⇒
+               WebService.convertToEUR(t.currency, t.amount).
+                          map(eurAmount ⇒
+                                t.copy( currency = Currency("EUR"),
+                                        amount = eurAmount )
+                             )
+              }.toPublisher(mat)
 
-  // merge streams and analyze in 1sec window
-  Flow(Merge(streams, mat)).groupedWithin(1000000, 1.second).map(analyze).foreach(println).consume(mat)
+  Flow(Merge(streams, mat)).
+    groupedWithin(1000000, 1.second).
+    map(analyze).
+    foreach(println).
+    consume(mat)
 
   private def analyze(transfers: Seq[Transfer]): String = {
     val num = transfers.size

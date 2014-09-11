@@ -12,5 +12,9 @@ object Step1 extends App {
   implicit val sys = ActorSystem("Step1")
   val mat = FlowMaterializer(MaterializerSettings())
   
-  Flow(() => transfer()).map(identity).foreach(println).onComplete(mat)(_ => sys.shutdown())
+  Flow(() => transfer()).
+    map(identity).
+    take(10).
+    foreach(println).
+    onComplete(mat)(_ => sys.shutdown())
 }

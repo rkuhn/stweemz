@@ -19,10 +19,10 @@ object Demo1 {
     val ticks = Flow(1000.millis, () ⇒ Tick)
 
     val streams =
-      for (_ ← 1 to 30000) yield ticks.zip(input.toProducer(mat)).map(x ⇒ x._2).mapFuture { t ⇒
+      for (_ ← 1 to 30000) yield ticks.zip(input.toPublisher(mat)).map(x ⇒ x._2).mapFuture { t ⇒
         WebService.convertToEUR(t.currency, t.amount)
           .map(amount ⇒ Transfer(t.from, t.to, Currency("EUR"), amount))
-      }.toProducer(mat)
+      }.toPublisher(mat)
 
     Flow(Merge(streams, mat)).groupedWithin(1000000, 1.second).map(analyze).foreach(println).consume(mat)
   }

@@ -22,13 +22,13 @@ object Demo {
   }
 
   def main(args: Array[String]): Unit = {
-    val input = Flow(() ⇒ Transfer()).toProducer(mat)
+    val input = Flow(() ⇒ Transfer()).toPublisher(mat)
     val ticks = Flow(1.second, () ⇒ Tick)
 
     val summarized = Flow(input).mapFuture { t ⇒
       WebService.convertToEUR(t.currency, t.amount)
         .map(amount ⇒ Transfer(t.from, t.to, Currency("EUR"), amount))
-    }.conflate[Summary](Summary(_), _ + _).toProducer(mat)
+    }.conflate[Summary](Summary(_), _ + _).toPublisher(mat)
 
     ticks.zip(summarized).foreach { case (_, Summary(n, amount)) ⇒ println(s"$n transfers, amounting to $amount") }.consume(mat)
 

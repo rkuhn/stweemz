@@ -7,7 +7,7 @@ import org.junit.Test
 import akka.stream.scaladsl.Flow
 import akka.stream.FlowMaterializer
 import akka.stream.MaterializerSettings
-import org.reactivestreams.api.Producer
+import org.reactivestreams.Publisher
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import org.hamcrest.Matchers._
@@ -26,7 +26,7 @@ object MergeTest {
     sys.shutdown()
   }
 
-  implicit class ts[T](val p: Producer[T]) extends AnyVal {
+  implicit class ts[T](val p: Publisher[T]) extends AnyVal {
     def toSeq = Await.result(Flow(p).grouped(Int.MaxValue).toFuture(mat), 30.seconds)
   }
 
@@ -55,7 +55,7 @@ class MergeTest {
     assertThat(first, equalTo(second))
   }
 
-  private def flow(x: Int) = Flow(seq(x)).toProducer(mat)
+  private def flow(x: Int) = Flow(seq(x)).toPublisher(mat)
   private def seq(x: Int) = (1 to 10) map (_ ⇒ x)
 
   private def compare[K, V](left: Map[K, V], right: Map[K, V]) {

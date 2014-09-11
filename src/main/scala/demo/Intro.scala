@@ -38,7 +38,7 @@ object Intro {
   val mat = FlowMaterializer(MaterializerSettings())
   
 	def main(args: Array[String]): Unit = {
-	  val input = Flow(() => Transfer()).toProducer(mat)
+	  val input = Flow(() => Transfer()).toPublisher(mat)
 	  val ticks = Flow(1.second, () => Tick)
 	  
 	  ticks.zip(input).foreach(println).consume(mat)

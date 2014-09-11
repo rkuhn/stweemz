@@ -1,6 +1,6 @@
 name := "stweemz"
 
-libraryDependencies += "com.typesafe.akka" %% "akka-stream-experimental" % "0.3"
+libraryDependencies += "com.typesafe.akka" %% "akka-stream-experimental" % "0.5"
 
 libraryDependencies += "junit" % "junit" % "4.11" % "test"
 
