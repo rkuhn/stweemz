@@ -24,4 +24,20 @@ object Step4 extends App {
   val input = Flow(() ⇒ transfer()).toProducer(mat)
   val ticks = Flow(1.second, () ⇒ Tick)
   // convert to EUR, then conflate and print one per second
+  val summarized = Flow(input).mapFuture(t => WebService.convertToEUR(t.currency, t.amount)
+    .map(Transfer(t.from, t.to, Currency("EUR"), _))  
+  ).conflate[Summary](Summary(_), _ + _).toProducer(mat)
+  
+  ticks.zip(summarized).foreach(println).consume(mat)
 }
+
+
+
+
+
+
+
+
+
+
+

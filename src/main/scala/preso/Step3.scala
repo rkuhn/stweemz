@@ -17,4 +17,17 @@ object Step3 extends App {
   val input = Flow(() ⇒ transfer()).toProducer(mat)
   val ticks = Flow(1.second, () ⇒ Tick)
   // ask WebService for currency exchange rate
+  ticks.zip(input).mapFuture {
+    case (_, t) => WebService.convertToEUR(t.currency, t.amount)
+     .map(amount => t -> Transfer(t.from, t.to, Currency("EUR"), amount))
+  }.foreach(println).consume(mat)
 }
+
+
+
+
+
+
+
+
+
