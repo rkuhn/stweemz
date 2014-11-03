@@ -3,12 +3,15 @@ package preso
 import akka.actor.ActorSystem
 import akka.stream.FlowMaterializer
 import akka.stream.MaterializerSettings
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl._
 import scala.concurrent.duration._
-import org.reactivestreams.Publisher
 
 object Step5 extends App {
-  import Bank._
+  import akka.preso.Bank._
+  implicit val sys = ActorSystem("Step5")
+  implicit val mat = FlowMaterializer(MaterializerSettings(sys).withInputBuffer(1,1))
+  implicit val sch = sys.scheduler
+  implicit val dis = sys.dispatcher
 
   case class Summary(num: Int, amount: Long) {
     def +(t: Transfer) = Summary(num + 1, amount + t.amount)
@@ -17,32 +20,27 @@ object Step5 extends App {
     def apply(t: Transfer): Summary = Summary(1, t.amount)
   }
 
-  implicit val sys = ActorSystem("Intro")
-  implicit val ec = sys.dispatcher
-  implicit val sched = sys.scheduler
-  val mat = FlowMaterializer(MaterializerSettings(initialInputBufferSize = 2))
+  val inputs = Source(Iterator.continually(randomTransfer()))
+  val rateFlow =
+    Source(0.seconds, 5.seconds, {
+      var current = 1.0
+      def rates(factor: Double): Map[Currency, Double] = WebService.rates.mapValues(_ * factor)
+      () => {
+        val r = rates(current)
+        current *= 1.5
+        r
+      }
+    })
 
-  val input = Flow(() ⇒ transfer()).toPublisher(mat)
-  val ticks = Flow(1.second, () ⇒ Tick)
-  
-  // flow of rates
-  val rateFlow0 = Flow(5.seconds, {
-    var current = 1.0
-    
-    () => {
-      current *= 1.5
-      rates(current)
-    }
-  }).toPublisher(mat)
-  val rateFlow = Flow(rates(1.0) :: Nil).concat(rateFlow0)
-  
   // expand rates and use them to convert Transfers
-  val summarized = rateFlow.expand(identity, (r: Map[Currency, Double]) => (r, r)).zip(input)
-    .map{case (rates, t) => Transfer(t.from, t.to, Currency("EUR"), (t.amount / rates(t.currency)).toLong)}
-    .conflate[Summary](Summary(_), _ + _).toPublisher(mat)
-  
-  ticks.zip(summarized).foreach { case (_, Summary(n, amount)) ⇒ println(s"$n transfers, amounting to $amount") }.consume(mat)
+  val summarized = rateFlow.expand(identity, (r: Map[Currency, Double]) => (r, r)).zip(inputs)
+    .map { case (rates, t) => Transfer(t.from, t.to, Currency("EUR"), (t.amount / rates(t.currency)).toLong) }
+    .conflate[Summary](Summary(_), _ + _)
 
-
-  def rates(factor: Double): Map[Currency, Double] = WebService.rates.mapValues(_ * factor)
+  Source(0.seconds, 1.second, () => Tick).
+    zip(summarized).
+    foreach { case (_, Summary(n, amount)) ⇒ println(s"$n transfers, amounting to $amount") }.
+    onComplete {
+      _ => sys.shutdown()
+    }
 }

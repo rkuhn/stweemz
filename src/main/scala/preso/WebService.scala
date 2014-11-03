@@ -7,7 +7,7 @@ import scala.concurrent.duration._
 import akka.actor.Scheduler
 
 object WebService {
-  import Bank._
+  import akka.preso.Bank._
 
   val rates = Map(
     Currency("USD") -> 1.3,
@@ -17,10 +17,12 @@ object WebService {
     Currency("LTL") -> 3.5,
     Currency("HUF") -> 307.0)
     
-  def convertToEUR(currency: Currency, amount: Long)(implicit ec: ExecutionContext): Future[Long] =
-    Future((amount / rates(currency)).toLong)
+  def convertToEUR(transfer: Transfer)(implicit ec: ExecutionContext): Future[Transfer] =
+    if(transfer.currency.name == "EUR") Future.successful(transfer)
+    else Future { transfer.copy(amount = (transfer.amount / rates(transfer.currency)).toLong,
+                                currency = Currency("EUR")) }
 
-  def convertToEURslow(currency: Currency, amount: Long)(implicit ec: ExecutionContext, sched: Scheduler): Future[Long] =
-    after(3.seconds, sched)(Future((amount / rates(currency)).toLong))
+  def convertToEURslow(transfer: Transfer)(implicit ec: ExecutionContext, sched: Scheduler): Future[Transfer] =
+    after(3.seconds, sched)(convertToEUR(transfer))
     
 }

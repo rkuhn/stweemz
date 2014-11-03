@@ -3,18 +3,17 @@ package preso
 import akka.actor.ActorSystem
 import akka.stream.FlowMaterializer
 import akka.stream.MaterializerSettings
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl._
 
 object Step1 extends App {
-  import Bank._
-  
-  // create stream of Transfers and print it
+  import akka.preso.Bank._
   implicit val sys = ActorSystem("Step1")
-  val mat = FlowMaterializer(MaterializerSettings())
-  
-  Flow(() => transfer()).
-    map(identity).
-    take(10).
+  implicit val mat = FlowMaterializer(MaterializerSettings(sys))
+  import sys.dispatcher
+
+  Source(Iterator.continually(randomTransfer())).
+    filter(_.amount > 900).
+    take(10000).
     foreach(println).
-    onComplete(mat)(_ => sys.shutdown())
+    onComplete { _ => sys.shutdown() }
 }

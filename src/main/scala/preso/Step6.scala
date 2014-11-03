@@ -3,38 +3,27 @@ package preso
 import akka.actor.ActorSystem
 import akka.stream.FlowMaterializer
 import akka.stream.MaterializerSettings
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl._
 import scala.concurrent.duration._
 
 object Step6 extends App {
-  import Bank._
+  import akka.preso.Bank._
+  implicit val sys = ActorSystem("Step6")
+  implicit val mat = FlowMaterializer(MaterializerSettings(sys).withInputBuffer(1,1))
+  implicit val sch = sys.scheduler
+  implicit val dis = sys.dispatcher
 
-  implicit val sys = ActorSystem("Intro")
-  implicit val ec = sys.dispatcher
-  implicit val sched = sys.scheduler
-  val mat = FlowMaterializer(MaterializerSettings())
+  val inputs = Source(Iterator.continually(randomTransfer()))
+  val ticks = Source(0.seconds, 1.second, () => Tick)
+  val upstream = ticks.zip(inputs).map(x ⇒ x._2).mapAsync(WebService.convertToEUR(_))
 
-  val input = Flow(() ⇒ transfer())
-  val ticks = Flow(1000.millis, () ⇒ Tick)
-
-  val streams =
-    for (_ ← 1 to 38462)
-      yield ticks.
-              zip(input.toPublisher(mat)).
-              map(x ⇒ x._2).
-              mapFuture { t ⇒
-               WebService.convertToEUR(t.currency, t.amount).
-                          map(eurAmount ⇒
-                                t.copy( currency = Currency("EUR"),
-                                        amount = eurAmount )
-                             )
-              }.toPublisher(mat)
-
-  Flow(Merge(streams, mat)).
+  upstream.mergeX(1 to 38461 map { _ => upstream }: _*).
     groupedWithin(1000000, 1.second).
     map(analyze).
     foreach(println).
-    consume(mat)
+    onComplete { _ =>
+      sys.shutdown()
+    }
 
   private def analyze(transfers: Seq[Transfer]): String = {
     val num = transfers.size
